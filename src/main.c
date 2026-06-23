@@ -1,29 +1,31 @@
 #include <stdio.h>
 #include <unistd.h>
-#include "perception.h"
+#include "webots_stub.h"
 #include "actuation.h"
-#include "decision.h"
 
 int main(void) {
-    printf("[SYSTEM] Initializing Autonomous Navigation Software...\n");
+    // 1. Inicializa a comunicação oficial com o simulador Webots (ou roda o Stub se não achar)
+    wb_robot_init();
     
-    // Initialize low-level drivers and reset odometry track
+    printf("[TEST] Inicializando teste isolado de Actuation e Odometria...\n");
     init_motors_and_odometry();
     
-    // Synchronous real-time control loop
-    while (1) {
-        // 1. Perception Layer (Alberth Viana)
-        SensorData sensors = read_and_filter_sensors();
+    printf("[TEST] Movendo para a frente por 3 segundos...\n");
+    set_motor_speeds(15, 15);
+    
+    // Simula o avanço do tempo e atualiza a odometria a cada 20ms
+    for (int i = 0; i < 150; i++) {
+        // wb_robot_step sincroniza o relógio do seu código com o do Webots
+        if (wb_robot_step(20) == -1) break; 
         
-        // 2. Localization Layer (Fernanda Costa)
-        RobotPosition position = update_odometry();
-        
-        // 3. Decision & Actuation Layer (Matheus Reges & Alexandre)
-        process_decision_making(sensors, position);
-        
-        // Control loop frequency: 20ms (50Hz) to prevent CPU overhead on embedded Linux
-        usleep(20000); 
+        RobotPosition current_pos = update_odometry();
+        printf("Posicao Atual -> X: %.3f metros | Y: %.3f metros | Theta: %.3f rad\n", 
+               current_pos.x, current_pos.y, current_pos.theta);
     }
     
+    printf("[TEST] Parando os motores...\n");
+    stop_motors();
+    
+    wb_robot_cleanup(); // Encerra a conexão com o simulador
     return 0;
 }
