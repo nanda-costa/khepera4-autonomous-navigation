@@ -2,9 +2,10 @@
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/k-team/khepera4/protos/Khepera4.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/bedroom/protos/PhotoFrame.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/computers/protos/ComputerMouse.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/k-team/khepera4/protos/Khepera4.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/panels/protos/Panel.proto"
 
 WorldInfo {
   basicTimeStep 16
@@ -19,27 +20,39 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.36321346712445784 0.786496634789807 0.49949876953175676 0.915567251746797
-  position -2.16252782177537 -1.192483196381579 3.452160202997564
-  follow "Khepera IV"
+  orientation -0.23249944824359078 0.7146071345412854 0.659758023694384 1.1444538530359822
+  position -0.7785312183832405 -1.2636481892361902 1.370836705857462
 }
 TexturedBackground {
 }
+Khepera4 {
+  hidden position_0_0 1375.8107737539867
+  hidden position_0_1 1394.1277105673112
+  hidden linearVelocity_0 -8.952046971012046e-08 -5.509456334770638e-09 8.23281374813859e-12
+  hidden angularVelocity_0 1.883451385496852e-07 -2.866655817473344e-06 -2.7930553968668335e-13
+  hidden rotation_1 -0.6132216048714707 0.6132216116880709 0.49791416758066115 4.065547861328724
+  hidden linearVelocity_1 -7.249073212929396e-08 -4.390570763653164e-09 1.3462347385326956e-09
+  hidden angularVelocity_1 -0.48484442813136003 8.5313175913546 -8.492260700909614e-07
+  hidden rotation_2 0.6749919904441947 -0.6749920127339474 -0.2979456252096324 2.562450582106316
+  hidden linearVelocity_2 -7.249079353966926e-08 -4.390574681845407e-09 -1.3297504887954521e-09
+  hidden angularVelocity_2 -0.5147264242435925 9.057120859673248 -9.016724101652891e-07
+  translation -0.0006899237224894143 -0.006306954805261356 -0.11544796581223249
+  rotation -1.4399887217429625e-06 -1.0808931831253597e-05 0.9999999999405468 0.056770068459502596
+}
 RectangleArena {
-  translation 0 0 -0.01
+  translation 0.08 0 -0.12
   floorSize 3 3
 }
 TexturedBackgroundLight {
 }
-Khepera4 {
-  hidden position_0_0 414.39940457164755
-  hidden position_0_1 206.6764963278306
-  hidden rotation_1 0.6256955516191494 -0.6256955610690834 -0.4658434732208374 2.2696906143717994
-  hidden rotation_2 -0.6689536328920147 0.6689536532821735 0.32404019318752614 3.7683198435802776
-  translation -0.254136 -0.176511 -0.0110144
-  rotation -0.0625740898515278 0.062254089903426464 -0.9960968384497308 -0.02481530717958602
+ComputerMouse {
+  hidden linearVelocity_0 -4.1844902694649513e-08 -2.377815500140765e-09 -4.973799150320701e-14
+  hidden angularVelocity_0 1.5855956965972472e-07 -2.7902611986892848e-06 -1.2045994141180233e-13
+  translation -0.0006845766999508989 -0.0063064536492234554 -0.12013851719990491
+  rotation -6.346222568790827e-05 -8.476356837664072e-06 0.9999999979503488 0.05677339154648739
 }
-PhotoFrame {
-  translation 0.14787 0.212131 0
-  rotation 0 0 1 -2.3561953071795863
+Panel {
+  translation 0.498696 -0.319706 -0.13
+  rotation 0 0 1 2.3562
+  size 0.01 0.3 0.3
 }
