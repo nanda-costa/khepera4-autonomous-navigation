@@ -1,15 +1,24 @@
 #ifndef DECISION_H
 #define DECISION_H
 
-#include "perception.h"
 #include "actuation.h"
+#include "perception.h"
 
+// Definição dos estados da FSM (Máquina de Estados)
 typedef enum {
-    STATE_GO_TO_GOAL,
-    STATE_OBSTACLE_AVOIDANCE,
-    STATE_GOAL_REACHED
-} RobotState;
+    IR_PARA_ALVO,
+    DESVIAR_OBSTACULO,
+    PARADO
+} EstadoRobo;
 
-void process_decision_making(SensorData sensors, RobotPosition position);
+// Estrutura para retornar os comandos de velocidade para a main
+typedef struct {
+    double left_velocity;
+    double right_velocity;
+    EstadoRobo estado_atual;
+} TargetVelocities;
+
+// Função principal de tomada de decisão
+TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, double alvo_x, double alvo_y);
 
 #endif

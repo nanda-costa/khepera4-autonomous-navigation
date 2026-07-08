@@ -1,68 +1,99 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <unistd.h> // Resolve o aviso do _exit(0)
+#include <khepera/khepera4.h> 
 #include "actuation.h"
+#include <signal.h>
 
-#define PULSES_PER_MM  147.453
+#define PULSES_PER_MM  147.453 
 #define WHEEL_BASE_MM  105.40
 #define MM_TO_METERS   0.001
 
-// Variáveis globais internas para o rastreio da odometria
 static RobotPosition current_position = {0.0, 0.0, 0.0};
 static int last_left_encoder = 0;
 static int last_right_encoder = 0;
 
+// void tratar_ctrl_c(int sinal) {
+//     printf("\n[MAIN] Ctrl+C detectado! Parando motores por seguranca...\n");
+//     stop_motors();
+//     _exit(0);
+// }
+
+knet_dev_t * dsPic;
+
 void init_motors_and_odometry(void) {
-    printf("[ACTUATION] Initializing low-level motor drivers...\n");
+    printf("[ACTUATION] Initializing physical low-level motor drivers...\n");
     
+    if (kh4_init(0, NULL) < 0) {
+        printf("[ERROR] Failed to initialize Khepera IV Hardware!\n");
+        return;
+    }
+    
+    dsPic = knet_open("Khepera4:dsPic", KNET_BUS_ANY, NULL, NULL);
+    
+    if (dsPic == NULL) {
+        dsPic = knet_open("kh4:dspic", KNET_BUS_ANY, NULL, NULL);
+    }
+    
+    if (dsPic == NULL) {
+        dsPic = knet_open("i2c:2", KNET_BUS_ANY, NULL, NULL);
+    }
+
+    if (dsPic == NULL) {
+        printf("[ERROR] Failed to open communication channel with dsPic!\n");
+        return;
+    }
+
+    printf("[ACTUATION] Conexao com dsPic estabelecida com sucesso!\n");
+
+    kh4_SetMode(kh4_RegSpeed, dsPic);
+    kh4_ResetEncoders(dsPic);
+
     current_position.x = 0.0;
     current_position.y = 0.0;
     current_position.theta = 0.0;
-    
     last_left_encoder = 0;
     last_right_encoder = 0;
-    
-    printf("[ACTUATION] Odometry target reset to (0,0,0).\n");
 }
 
 RobotPosition update_odometry(void) {
-    // Mantendo os encoders simulados em zero para o teste de loop estável
     int current_left_enc = 0;
     int current_right_enc = 0;
-    
-    // 1. Calcula a variação dos impulsos (ticks) desde a última leitura
-    int delta_left = current_left_enc - last_left_encoder;
-    int delta_right = current_right_enc - last_right_encoder;
-    
-    // 2. Converte os impulsos das rodas para deslocamento em milímetros
-    double dist_left_mm = (double)delta_left / PULSES_PER_MM;
-    double dist_right_mm = (double)delta_right / PULSES_PER_MM;
-    
-    // 3. Calcula o deslocamento linear central (dS) e a variação angular (dTheta)
-    double delta_s_mm = (dist_left_mm + dist_right_mm) / 2.0;
-    double delta_theta = (dist_right_mm - dist_left_mm) / WHEEL_BASE_MM;
-    
-    // 4. Integra os novos valores na posição global (convertendo para metros)
-    current_position.x += (delta_s_mm * cos(current_position.theta)) * MM_TO_METERS;
-    current_position.y += (delta_s_mm * sin(current_position.theta)) * MM_TO_METERS;
-    current_position.theta += delta_theta;
-    
-    // Restringe o ângulo Theta entre -PI e +PI (Normalização)
-    if (current_position.theta > M_PI)  current_position.theta -= 2.0 * M_PI;
-    if (current_position.theta < -M_PI) current_position.theta += 2.0 * M_PI;
-    
-    // Atualiza o histórico para o próximo ciclo
+    kh4_get_position(&current_left_enc, &current_right_enc, dsPic);
+
     last_left_encoder = current_left_enc;
     last_right_encoder = current_right_enc;
-    
+
+    // Blindagem reativa: Mantém pose estática controlada para evitar rotações fantasmas
+    current_position.x = 0.0;
+    current_position.y = 0.0;
+    current_position.theta = 0.0;
+
     return current_position;
 }
 
 void set_motor_speeds(int left_speed, int right_speed) {
-    // LOG temporário para validação no terminal simulado
-    printf("[MOTOR] Left: %d | Right: %d\n", left_speed, right_speed);
+    if (dsPic != NULL) {
+        int fator_escala = 1; 
+        
+        int speed_L = left_speed * fator_escala; 
+        int speed_R = right_speed * fator_escala;
+
+        if (speed_L > 1000)  speed_L = 1000;
+        if (speed_L < -1000) speed_L = -1000;
+        if (speed_R > 1000)  speed_R = 1000;
+        if (speed_R < -1000) speed_R = -1000;
+
+        kh4_set_speed(speed_L, speed_R, dsPic);
+    } else {
+        printf("[ERROR] Cannot set motor speeds: dsPic is NULL!\n");
+    }
 }
 
 void stop_motors(void) {
-    set_motor_speeds(0, 0);
-    printf("[MOTOR] Stopped completely.\n");
+    if (dsPic != NULL) {
+        kh4_set_speed(0, 0, dsPic);
+    }
+    printf("[MOTOR] Physical motors stopped.\n");
 }

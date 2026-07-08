@@ -1,20 +1,15 @@
-export LD_LIBRARY_PATH := /usr/local/webots/lib/controller:$(LD_LIBRARY_PATH)
-CC = gcc
-CFLAGS = -Wall -Iinclude
+CC = arm-linux-gnueabihf-gcc
+CFLAGS = -Wall -Iinclude -I./include_khepera -DROBOT_FISICO -fno-stack-protector -U_FORTIFY_SOURCE
+LDFLAGS = -L. -Wl,--allow-shlib-undefined -Wl,--wrap=memcpy -lm ./libkhepera.so
 
-WEBOTS_HOME = /usr/local/webots
-
-CFLAGS += -I"$(WEBOTS_HOME)/include/controller/c"
-LFLAGS = -L"$(WEBOTS_HOME)/lib/controller" -lController -lm
-
-TARGET = navegacao_khepera
-SRCS = src/main.c src/actuation.c
+TARGET = navegacao_fisi_khepera
+SRCS = src/main.c src/actuation.c src/perception.c src/decision.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LFLAGS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 clean:
 	rm -f src/*.o $(TARGET)
