@@ -22,18 +22,14 @@ extern knet_dev_t * dsPic;
 
 // --- TRATAMENTO DO CTRL+C CORRIGIDO E SEGURO ---
 void tratar_ctrl_c(int sinal) {
-    printf("\n[CTRL+C] Interrupcao detectada! Forcando parada dos motores fisicos...\n");
-    
+    printf("\n[CTRL+C] Interrupcao detectada! Forcando parada imediata...\n");
+    signal(SIGINT, SIG_DFL); // Restabelece comportamento nativo
     if (dsPic != NULL) {
-        // 1. Envia velocidade zero para ambas as rodas imediatamente no registrador
         kh4_set_speed(0, 0, dsPic);
-        
-        // 2. Aguarda um pequeno instante para garantir que os pacotes I2C foram gravados no hardware
-        usleep(50000); 
+        usleep(10000); 
     }
-    
-    printf("[CTRL+C] Motores parados com sucesso. Encerrando processo Linux.\n");
-    _exit(0); // Agora sim encerra o programa com segurança
+    printf("[CTRL+C] Processo Linux encerrado.\n");
+    raise(SIGINT); // Força a morte do processo se houver travamento de barramento
 }
 
 // --- CABEÇALHOS DO SEU PROJETO ANTIGO ---
@@ -57,7 +53,7 @@ int main() {
         init_motors_and_odometry();
     #endif
 
-    double alvo_x = 1.0;
+    double alvo_x = 1500.0;
     double alvo_y = 1.0;
     printf("Missão Iniciada: Alvo em (%.1f, %.1f)\n", alvo_x, alvo_y);
 

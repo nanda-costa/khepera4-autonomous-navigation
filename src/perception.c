@@ -23,7 +23,7 @@ SensorData read_and_filter_sensors(unsigned short us_sensors[12]) {
     // Calibracao real:
     // IR1 ficou em ~15 sem resma e subiu para ~70 com a resma perto parada.
     // Em movimento, IR2 foi o sensor que subiu forte, de ~400 ate 1020.
-    if (us_sensors[1] > 45 || us_sensors[2] > 250) {
+    if (us_sensors[1] > 350 || us_sensors[0] > 290 || us_sensors[2] > 290) {
         dados.obstaculo_detectado = 1;
         dados.forca_desvio = dados.left_distance - dados.right_distance;
     } else {
