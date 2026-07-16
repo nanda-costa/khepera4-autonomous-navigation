@@ -2,95 +2,111 @@
 #include <stdio.h>
 #include "decision.h"
 
+// Definições físicas do robô (conversão para metros)
+#define WHEEL_RADIUS      0.021    // Raio da roda em metros
+#define AXLE_LENGTH       0.1054   // Distância entre eixos em metros
+#define TARGET_TOLERANCE  50.0     // Parar a 50mm do alvo (em mm)
+
 typedef enum {
     LOGICA_CONDUZIR,
-    LOGICA_PIVO_DESVIO,
-    LOGICA_ESCAPE,
-    LOGICA_REALINHAR
+    LOGICA_GIRAR_DESVIO,
+    LOGICA_ESCAPE_RETO
 } EstadoControle;
 
 static EstadoControle estado_interno = LOGICA_CONDUZIR;
-static double angulo_original = 0.0;
-static int gravou_angulo = 0;
-static int contador_escape = 0;
+static int dodge_turn_dir = 1; // +1 Esquerda, -1 Direita
+
+// Variáveis de memória para guardar o ponto de início do escape reto
+static double escape_x0 = 0.0;
+static double escape_y0 = 0.0;
+static int iniciou_escape = 0;
 
 TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, double alvo_x, double alvo_y) {
     TargetVelocities velocities;
     
-    // 1. MÁQUINA DE ESTADOS COMPORTAMENTAL (SEQUENCIAL SEQUER ATROPELADA)
+    // 1. MÁQUINA DE ESTADOS REATIVA (Baseada no código do Webots)
     if (sensores.obstaculo_detectado == 1) {
-        if (estado_interno != LOGICA_PIVO_DESVIO && gravou_angulo == 0) {
-            angulo_original = pose.theta; 
-            gravou_angulo = 1;
+        if (estado_interno != LOGICA_GIRAR_DESVIO) {
+            // Define para onde girar: se o obstáculo está mais forte na esquerda, gira para a direita (-1)
+            dodge_turn_dir = (sensores.left_distance > sensores.right_distance) ? -1 : 1;
         }
-        estado_interno = LOGICA_PIVO_DESVIO;
+        estado_interno = LOGICA_GIRAR_DESVIO;
+        iniciou_escape = 0; // Reseta a trava do escape reto
     } 
     else {
-        // Se a pista limpou e ele estava no meio do desvio, ativa o escape obrigatório
-        if (estado_interno == LOGICA_PIVO_DESVIO) {
-            estado_interno = LOGICA_ESCAPE;
-            contador_escape = 0; 
+        // Se a pista limpou e ele estava girando, vai para o escape reto
+        if (estado_interno == LOGICA_GIRAR_DESVIO) {
+            estado_interno = LOGICA_ESCAPE_RETO;
         }
     }
 
-    // 2. LÓGICA DE EXECUÇÃO E VELOCIDADES
+    // 2. CÁLCULO CINEMÁTICO DOS ESTADOS
     switch (estado_interno) {
         
         case LOGICA_CONDUZIR: {
-            double v_linear = 10.0; 
-            velocities.left_velocity  = v_linear;
-            velocities.right_velocity = v_linear;
+            // --- CONTROLADOR GO-TO-GOAL (IGUAL AO WEBOTS) ---
+            // 1. Distância até o alvo (trabalhando em mm)
+            double dx = alvo_x - pose.x;
+            double dy = alvo_y - pose.y;
+            double dist_to_target = hypot(dx, dy);
+
+            // Se chegou na tolerância, para os motores
+            if (dist_to_target < TARGET_TOLERANCE) {
+                velocities.left_velocity  = 0.0;
+                velocities.right_velocity = 0.0;
+                velocities.estado_atual   = PARADO;
+                break;
+            }
+
+            // 2. Ângulo desejado versus rumo atual
+            double desired_angle = atan2(dy, dx);
+            double error = desired_angle - pose.theta;
+
+            // Normaliza o erro entre -PI e +PI
+            while (error >  M_PI) error -= 2.0 * M_PI;
+            while (error < -M_PI) error += 2.0 * M_PI;
+
+            // 3. Velocidade Linear (v) e Angular (w) escaladas para o robô físico
+            double v_base = 12.0; // Velocidade base de cruzeiro no chão
+            double v_robot = v_base * (1.0 - fabs(error) / M_PI);
+            double w_robot = 5.0 * error; // Ganho proporcional do rumo
+
+            // 4. Cinemática Diferencial Inversa (Igual ao Webots, mas na escala física)
+            velocities.left_velocity  = v_robot - (w_robot * AXLE_LENGTH / 2.0);
+            velocities.right_velocity = v_robot + (w_robot * AXLE_LENGTH / 2.0);
             velocities.estado_atual   = IR_PARA_ALVO; // Estado 0
-            gravou_angulo = 0;
             break;
         }
         
-        case LOGICA_PIVO_DESVIO: {
-            if (sensores.forca_desvio >= 0) {
-                velocities.left_velocity  =  20.0;
-                velocities.right_velocity = -20.0; 
-            } else {
-                velocities.left_velocity  = -20.0;
-                velocities.right_velocity =  20.0;
+        case LOGICA_GIRAR_DESVIO: {
+            // Gira parado sobre o próprio eixo até limpar a frente (Igual ao Webots)
+            double vel_giro = 15.0;
+            velocities.left_velocity  = -dodge_turn_dir * vel_giro;
+            velocities.right_velocity =  dodge_turn_dir * vel_giro;
+            velocities.estado_atual   = DESVIAR_OBSTACULO; // Estado 1
+            break;
+        }
+        
+        case LOGICA_ESCAPE_RETO: {
+            // Grava a posição onde a pista limpou
+            if (!iniciou_escape) {
+                escape_x0 = pose.x;
+                escape_y0 = pose.y;
+                iniciou_escape = 1;
             }
-            velocities.estado_atual = DESVIAR_OBSTACULO; // Estado 1
-            break;
-        }
-        
-        case LOGICA_ESCAPE: {
-            // Avança em linha reta por 60 ciclos de forma blindada para ultrapassar o bloco
-            if (contador_escape++ < 60) {
+
+            // Calcula a distância percorrida em linha reta desde o início do escape (em mm)
+            double delta_escape = hypot(pose.x - escape_x0, pose.y - escape_y0);
+
+            // Avança reto por 200 mm (0.2 metros, igualzinho ao código do Webots)
+            if (delta_escape < 200.0) {
                 velocities.left_velocity  = 10.0;
                 velocities.right_velocity = 10.0;
-                velocities.estado_atual   = IR_PARA_ALVO; // Mantém Estado 0 no print
+                velocities.estado_atual   = IR_PARA_ALVO; // Estado 0
             } else {
-                // Passou a resma completamente! Agora sim libera para alinhar
-                estado_interno = LOGICA_REALINHAR; 
-            }
-            break;
-        }
-        
-        case LOGICA_REALINHAR: {
-            double erro_angulo = angulo_original - pose.theta;
-            
-            while (erro_angulo >  M_PI) erro_angulo -= 2.0 * M_PI;
-            while (erro_angulo < -M_PI) erro_angulo += 2.0 * M_PI;
-
-            if (fabs(erro_angulo) < 0.05) {
-                // Alinhamento cravado com precisão de bússola
-                estado_interno = LOGICA_CONDUZIR; 
-                velocities.left_velocity  = 10.0;
-                velocities.right_velocity = 10.0;
-                velocities.estado_atual   = IR_PARA_ALVO;
-            } else {
-                // Pivô suave de retorno ao rumo original
-                double ganho_giro = 20.0 * erro_angulo;
-                if (ganho_giro >  16.0) ganho_giro =  16.0;
-                if (ganho_giro < -16.0) ganho_giro = -16.0;
-
-                velocities.left_velocity  = -ganho_giro;
-                velocities.right_velocity =  ganho_giro;
-                velocities.estado_atual   = PARADO; // Estado 2
+                // Afastou-se o suficiente da resma, volta a calcular o rumo ao alvo!
+                estado_interno = LOGICA_CONDUZIR;
+                iniciou_escape = 0;
             }
             break;
         }

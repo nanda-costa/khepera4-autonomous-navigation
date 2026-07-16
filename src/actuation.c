@@ -57,6 +57,7 @@ RobotPosition update_odometry(void) {
     double dc = 0.5 * (dl + dr);
     double dth = (dr - dl) / WHEEL_BASE_MM;
 
+    // Acumula X, Y e Theta reais (essencial para a matemática do Webots funcionar!)
     current_position.x += dc * cos(current_position.theta + 0.5 * dth);
     current_position.y += dc * sin(current_position.theta + 0.5 * dth);
     current_position.theta += dth;
