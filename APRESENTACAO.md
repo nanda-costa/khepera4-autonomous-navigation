@@ -7,7 +7,8 @@
 - [ ] Confirma que `git status` está limpo / commitado (rodar `git log --oneline -5` pra saber o que está valendo).
 - [ ] Resma de papel (ou objeto equivalente) pra servir de obstáculo.
 - [ ] Fita crepe ou similar pra marcar no chão o ponto de partida e o ponto de chegada (~1,5m à frente, ver seção 4).
-- [ ] Cabo de rede / confirmar que o robô e o notebook vão conseguir se enxergar na rede do local da apresentação (IP do robô: `192.168.15.135` — **se a rede do local for diferente, isso pode mudar**, testar com antecedência se possível).
+- [ ] Confirmar que o robô e o notebook estão na mesma rede WiFi. IP atual do robô na rede da UFAM (`WP3-CETELI-2-IA`): **`10.224.2.110`** (pode mudar se o robô reiniciar ou a rede reatribuir o IP via DHCP — ver seção 7 se o IP parecer não responder mais).
+- [ ] Redes já salvas no robô (`/etc/wpa_supplicant/wpa_supplicant.conf`, ele conecta automaticamente na que estiver no ar): `WP3-CETELI-2-IA`, hotspot do celular (`S25 FE de Fernanda`) como reserva, e a rede de casa.
 
 ## 2. Build (no notebook)
 
@@ -23,7 +24,7 @@ Confirma no final que apareceu a linha do `arm-linux-gnueabihf-gcc ... -o navega
 ## 3. Deploy (do notebook pro robô)
 
 ```bash
-scp navegacao_fisi_khepera root@192.168.15.135:/home/root/
+scp navegacao_fisi_khepera root@10.224.2.110:/home/root/
 ```
 
 ## 4. Preparar o ambiente físico
@@ -40,7 +41,7 @@ O alvo está fixo no código em `main.c` como **1500mm (1,5m) à frente, quase r
 Em um terminal, conecta no robô:
 
 ```bash
-ssh root@192.168.15.135
+ssh root@10.224.2.110
 cd /home/root
 chmod +x ./navegacao_fisi_khepera
 sudo ./navegacao_fisi_khepera
@@ -70,16 +71,18 @@ Pontos pra destacar:
 
 ## 7. Se algo der errado na hora
 
-- **`chmod: cannot access`** → você está no terminal local, não no robô. Roda `ssh root@192.168.15.135` de novo.
+- **`chmod: cannot access`** → você está no terminal local, não no robô. Roda `ssh root@10.224.2.110` de novo.
 - **Robô não desvia / passa reto pelo obstáculo** → os sensores podem precisar de recalibração pro ambiente novo (iluminação/piso diferentes mudam a leitura). Threshold fica em `src/perception.c:26`.
 - **Robô gira mas nunca volta pra reta / fica manco** → já foi corrigido nos testes anteriores (bug de unidades em `src/decision.c`), não deve mais acontecer — mas se acontecer, é o primeiro lugar pra olhar.
-- **Perda de conexão SSH no meio da demo** → o robô continua rodando sozinho (é um processo já iniciado); só reconecta com `ssh root@192.168.15.135` se precisar ver o log de novo, ou aperta o botão físico de emergência do robô se precisar parar sem terminal.
+- **Perda de conexão SSH no meio da demo** → o robô continua rodando sozinho (é um processo já iniciado); só reconecta com `ssh root@10.224.2.110` se precisar ver o log de novo, ou aperta o botão físico de emergência do robô se precisar parar sem terminal.
+- **`ssh: connect ... Connection timed out` ou `Connection refused`** → o robô pegou um IP diferente (rede via DHCP muda o IP a cada reconexão). Com acesso físico (teclado/monitor) no robô, roda `ip addr show wlan0` e procura a linha `inet` pra achar o IP atual; atualiza os comandos com esse IP novo.
+- **Robô não conecta em nenhuma rede WiFi** → com acesso físico, `wpa_cli -i wlan0 scan_results` mostra as redes visíveis no local; confere se o SSID da rede do evento está exatamente igual (maiúscula/minúscula e hífen importam) ao que está salvo em `/etc/wpa_supplicant/wpa_supplicant.conf`. Se não estiver salva, adiciona com `wpa_passphrase "NOME_DA_REDE" "senha" >> /etc/wpa_supplicant/wpa_supplicant.conf` e reinicia com `killall wpa_supplicant && wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf`.
 
 ## 8. Se o professor pedir pra mudar algo na hora
 
 Não recomendo editar código ao vivo sob pressão, mas se pedir pra "andar mais rápido" ou "desviar de mais longe", os parâmetros relevantes são:
 
-- Velocidade de cruzeiro: `src/decision.c`, `dirigir_em_direcao_a(pose, alvo_x, alvo_y, 25.0, ...)` — o `25.0`.
+- Velocidade de cruzeiro: `src/decision.c`, `dirigir_em_direcao_a(pose, alvo_x, alvo_y, 30.0, ...)` — o `30.0`.
 - Sensibilidade de detecção de obstáculo: `src/perception.c:26` (`us_sensors[1] > 350 || ...`).
 - Distância do alvo: `main.c`, `alvo_x = 1500.0`.
 

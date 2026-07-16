@@ -117,7 +117,7 @@ TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, 
             }
 
             // 2. Mira direto no alvo final (já está sobre/perto da reta original)
-            dirigir_em_direcao_a(pose, alvo_x, alvo_y, 30.0,
+            dirigir_em_direcao_a(pose, alvo_x, alvo_y, 35.0,
                                   &velocities.left_velocity, &velocities.right_velocity);
             velocities.estado_atual   = IR_PARA_ALVO; // Estado 0
             velocities.fase_interna   = 0;
@@ -128,7 +128,7 @@ TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, 
 
         case LOGICA_GIRAR_DESVIO: {
             // Gira parado sobre o próprio eixo até limpar a frente (Igual ao Webots)
-            double vel_giro = 26.0;
+            double vel_giro = 30.0;
             velocities.left_velocity  = -dodge_turn_dir * vel_giro;
             velocities.right_velocity =  dodge_turn_dir * vel_giro;
             velocities.estado_atual   = DESVIAR_OBSTACULO; // Estado 1
@@ -155,8 +155,8 @@ TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, 
             velocities.fase_interna   = 2;
             velocities.dist_ate_a_reta = dist_a_linha;
             velocities.dist_percorrida_escape = delta_escape;
-            velocities.left_velocity  = 24.0;
-            velocities.right_velocity = 24.0;
+            velocities.left_velocity  = 28.0;
+            velocities.right_velocity = 28.0;
             velocities.estado_atual   = IR_PARA_ALVO; // Estado 0
 
             // Anda reto só a folga mínima de segurança do obstáculo, depois passa
@@ -184,7 +184,7 @@ TargetVelocities process_control_logic(RobotPosition pose, SensorData sensores, 
 
             double dist_a_linha = distancia_ate_a_reta(pose.x, pose.y, origem_x, origem_y, alvo_x, alvo_y);
 
-            dirigir_em_direcao_a(pose, mira_x, mira_y, 26.0,
+            dirigir_em_direcao_a(pose, mira_x, mira_y, 30.0,
                                   &velocities.left_velocity, &velocities.right_velocity);
             velocities.estado_atual   = IR_PARA_ALVO; // Estado 0
             velocities.fase_interna   = 3;
