@@ -122,13 +122,18 @@ int main() {
         // Telemetria controlada com os valores limpos (0 a 1023)
         static int contador_print = 0;
         if (contador_print++ % 10 == 0) {
-            printf("[STATUS] Estado: %d | IR0: %d | IR1: %d | IR2: %d | obst: %d | desvio: %.1f | L: %.1f | R: %.1f\n",
-                   comandos.estado_atual,
+            printf("[STATUS] fase: %d | pose: (%.0f, %.0f, %.2f) | IR0: %d | IR1: %d | IR2: %d | obst: %d | desvio: %.1f | dist_linha: %.0f | dist_escape: %.0f | L: %.1f | R: %.1f\n",
+                   comandos.fase_interna,
+                   pose_atual.x,
+                   pose_atual.y,
+                   pose_atual.theta,
                    sensores_reais[0],
                    sensores_reais[1],
                    sensores_reais[2],
                    dados_sensores.obstaculo_detectado,
                    dados_sensores.forca_desvio,
+                   comandos.dist_ate_a_reta,
+                   comandos.dist_percorrida_escape,
                    comandos.left_velocity,
                    comandos.right_velocity);
         }
